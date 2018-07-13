@@ -5,6 +5,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+      #- IMAGE_ARG_ALPINE_MIRROR=${IMAGE_ARG_ALPINE_MIRROR}
+      - IMAGE_ARG_ALPINE_MIRROR=${IMAGE_ARG_ALPINE_MIRROR:-mirror.tuna.tsinghua.edu.cn}
     command: ["nginx", "-g", "daemon off;"]
     image: cirepo/nginx-proxy:1.15.0-alpine
     restart: always

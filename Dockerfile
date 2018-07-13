@@ -4,14 +4,27 @@
 FROM nginx:1.15.0-alpine
 
 
-RUN apk add --update jq \
- && if [ -f /etc/nginx/conf.d/default.conf ]; then rm -f /etc/nginx/conf.d/default.conf; fi \
- && rm -rf /tmp/* /var/cache/apk/*
+ARG IMAGE_ARG_ALPINE_MIRROR
 
 
-COPY docker/*.sh /
-COPY docker/nginx.conf /etc/nginx/nginx.conf
-COPY docker/*.tpl /
+COPY --chown=root:root docker /
+
+
+RUN set -ex \
+  && echo "http://${IMAGE_ARG_ALPINE_MIRROR:-dl-cdn.alpinelinux.org}/alpine/v3.7/main" > /etc/apk/repositories \
+  && echo "http://${IMAGE_ARG_ALPINE_MIRROR:-dl-cdn.alpinelinux.org}/alpine/v3.7/community" >> /etc/apk/repositories \
+  && echo "http://${IMAGE_ARG_ALPINE_MIRROR:-dl-cdn.alpinelinux.org}/alpine/edge/testing/" >> /etc/apk/repositories \
+  && apk add --update jq shadow socat sudo \
+  && usermod -u 1000 nginx \
+  && groupmod -g 1000 nginx \
+  && echo "nginx ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/nginx \
+  && chmod 777 /var/run \
+  && chown -R nginx:nginx /var/log/nginx \
+  && if [ -f /etc/nginx/conf.d/default.conf ]; then rm -f /etc/nginx/conf.d/default.conf; fi \
+  && rm -rf /tmp/* /var/cache/apk/*
+
+
+USER nginx
 
 
 ENTRYPOINT ["/entrypoint.sh"]
