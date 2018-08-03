@@ -20,6 +20,8 @@ services:
       NONSECUREPORT: ${NONSECUREPORT:-1080}
       NONSECUREPORT_EXPOSED: ${NONSECUREPORT_EXPOSED:-80}
 
+
+
       # hostname not works if bound it in /etc/hosts
       NGINX_PROXY_CONFIG: |-
         [
@@ -64,8 +66,11 @@ services:
         ]
 
     volumes:
+    - cache:/var/cache/nginx
+
 
     - conf.d:/etc/nginx/conf.d
+    - log:/var/log/letsencrypt
     - log:/var/log/nginx
 
 networks:
@@ -80,6 +85,24 @@ networks:
       - subnet: 2001:3984:3989::/64
 
 volumes:
+  cache:
+    driver: local
+    driver_opts:
+      type: none
+      device: ${PWD}/data/cache
+      o: bind
+  certs-archive:
+    driver: local
+    driver_opts:
+      type: none
+      device: ${PWD}/data/certs-archive
+      o: bind
+  certs-keys:
+    driver: local
+    driver_opts:
+      type: none
+      device: ${PWD}/data/certs-keys
+      o: bind
   conf.d:
     driver: local
     driver_opts:

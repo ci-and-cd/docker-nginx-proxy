@@ -2,6 +2,8 @@
 
 set -e
 
+if [ ! -L /etc/letsencrypt/live ]; then ln -s /etc/letsencrypt/keys /etc/letsencrypt/live; fi
+
 if [ "$1" == 'nginx' ]; then
     /render.sh "/etc/nginx/conf.d"
 

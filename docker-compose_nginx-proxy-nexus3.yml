@@ -59,9 +59,18 @@ services:
               "server_location": "/", "server_name": "${SERVER_NAME_PREFIX:-}npm.${INSTANCE_DOMAIN:-internal}", "server_port": ${SECUREPORT:-1443}, "server_protocol": "https"}
         ]
 
+
+
+
+
+
+
     volumes:
-    - certs:/etc/nginx/certs/live
+    - cache:/var/cache/nginx
+    - certs-archive:/etc/letsencrypt/archive
+    - certs-keys:/etc/letsencrypt/keys
     - conf.d:/etc/nginx/conf.d
+    - log:/var/log/letsencrypt
     - log:/var/log/nginx
 
 networks:
@@ -76,11 +85,23 @@ networks:
       - subnet: 2001:3984:3989::/64
 
 volumes:
-  certs:
+  cache:
     driver: local
     driver_opts:
       type: none
-      device: ${PWD}/data/certs
+      device: ${PWD}/data/cache
+      o: bind
+  certs-archive:
+    driver: local
+    driver_opts:
+      type: none
+      device: ${PWD}/data/certs-archive
+      o: bind
+  certs-keys:
+    driver: local
+    driver_opts:
+      type: none
+      device: ${PWD}/data/certs-keys
       o: bind
   conf.d:
     driver: local

@@ -3,12 +3,6 @@
 
 # But not these files...
 !/.gitignore
-!/certs/.gitignore
-!/certs/archive/.gitignore
-!/certs/keys/.gitignore
-!/conf.d/.gitignore
-!/log/.gitignore
-!/permissions
 # etc...
 
 # ...even if they are in subdirectories
