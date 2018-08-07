@@ -14,17 +14,19 @@
 #./render.sh /etc/nginx/conf.d
 
 
-# arguments: server_name, server_port, server_resolver, target_directory
+# arguments: server_name, server_port, server_port_exposed, server_resolver, target_directory
 function proxy() {
     local server_name="$1"
     local server_port="$2"
-    local server_resolver="$3"
-    local target_directory="$4"
+    local server_port_exposed="$3"
+    local server_resolver="$4"
+    local target_directory="$5"
     local target="${target_directory}/proxy_${server_name}.conf"
     local template="proxy_http.conf.tpl"
 
     echo "server_name: ${server_name}"
     echo "server_port: ${server_port}"
+    echo "server_port_exposed: ${server_port_exposed}"
     echo "server_resolver: ${server_resolver}"
     echo "target_directory: ${target_directory}"
     echo "target: ${target}"
@@ -42,6 +44,7 @@ function proxy() {
     fi
 
     sed "s#<SERVER_PORT>#${server_port}#" ${template} | \
+        sed "s#<SERVER_PORT_EXPOSED>#${server_port_exposed}#" | \
         sed "s#<SERVER_RESOLVER>#${server_resolver}#" | \
         sed "s#<SERVER_NAME>#${server_name}#" > ${target}
 
@@ -49,16 +52,17 @@ function proxy() {
     cat ${target}
 }
 
-# arguments: backend_host_port, basic_auth_header, server_location, server_name, server_port, server_protocol, server_proxy_pass, target_directory
+# arguments: backend_host_port, basic_auth_header, server_location, server_name, server_port, server_port_exposed, server_protocol, server_proxy_pass, target_directory
 function reverse_proxy() {
     local backend_host_port="$1"
     local basic_auth_header="$2"
     local server_location="$3"
     local server_name="$4"
     local server_port="$5"
-    local server_protocol="$6"
-    local server_proxy_pass="$7"
-    local target_directory="$8"
+    local server_port_exposed="$6"
+    local server_protocol="$7"
+    local server_proxy_pass="$8"
+    local target_directory="$9"
     local target="${target_directory}/reverse_proxy_${server_protocol}_${server_name}.conf"
     local template="reverse_proxy_${server_protocol}.conf.tpl"
 
@@ -67,6 +71,7 @@ function reverse_proxy() {
     echo "server_location: ${server_location}"
     echo "server_name: ${server_name}"
     echo "server_port: ${server_port}"
+    echo "server_port_exposed: ${server_port_exposed}"
     echo "server_proxy_pass: ${server_proxy_pass}"
     echo "target_directory: ${target_directory}"
     echo "target: ${target}"
@@ -84,6 +89,7 @@ function reverse_proxy() {
     fi
 
     sed "s#<BACKEND_HOST_PORT>#${backend_host_port}#; s#<SERVER_PORT>#${server_port}#" ${template} | \
+        sed "s#<SERVER_PORT_EXPOSED>#${server_port_exposed}#" | \
         sed "s#<SERVER_LOCATION>#${server_location}#" | \
         sed "s#<SERVER_NAME>#${server_name}#" | \
         sed "s#<SERVER_PROXY_PASS>#${server_proxy_pass}#" > ${target}
@@ -134,6 +140,7 @@ for row in $(echo "${NGINX_PROXY_CONFIG}" | jq -r '.[] | @base64'); do
 
     BACKEND_HOST=$(_jq '.host')
     SERVER_PORT=$(_jq '.server_port')
+    SERVER_PORT_EXPOSED=$(_jq '.server_port_exposed')
 
     if [ "${BACKEND_HOST}" != "null" ] && [ ! -z "${BACKEND_HOST}" ]; then
         # reverse_proxy mode
@@ -153,6 +160,16 @@ for row in $(echo "${NGINX_PROXY_CONFIG}" | jq -r '.[] | @base64'); do
             if [ "${SECUREPORT}" == "null" ] || [ -z "${SECUREPORT}" ]; then SERVER_PORT="443"; else SERVER_PORT="${SECUREPORT}"; fi
         else
             SERVER_PORT="80"
+        fi
+    fi
+
+    if [ "${SERVER_PORT_EXPOSED}" == "null" ] || [ -z "${SERVER_PORT_EXPOSED}" ]; then
+        if [ "${SERVER_PROTOCOL}" == "http" ]; then
+            if [ "${NONSECUREPORT_EXPOSED}" == "null" ] || [ -z "${NONSECUREPORT_EXPOSED}" ]; then SERVER_PORT_EXPOSED="80"; else SERVER_PORT_EXPOSED="${NONSECUREPORT_EXPOSED}"; fi
+        elif [ "${SERVER_PROTOCOL}" == "https" ]; then
+            if [ "${SECUREPORT_EXPOSED}" == "null" ] || [ -z "${SECUREPORT_EXPOSED}" ]; then SERVER_PORT_EXPOSED="443"; else SERVER_PORT_EXPOSED="${SECUREPORT_EXPOSED}"; fi
+        else
+            SERVER_PORT_EXPOSED="80"
         fi
     fi
 
@@ -182,20 +199,22 @@ for row in $(echo "${NGINX_PROXY_CONFIG}" | jq -r '.[] | @base64'); do
         echo "SERVER_LOCATION: ${SERVER_LOCATION}"
         echo "SERVER_NAME: ${SERVER_NAME}"
         echo "SERVER_PORT: ${SERVER_PORT}"
+        echo "SERVER_PORT_EXPOSED: ${SERVER_PORT_EXPOSED}"
         echo "SERVER_PROTOCOL: ${SERVER_PROTOCOL}"
         echo "SERVER_PROXY_PASS: ${SERVER_PROXY_PASS}"
         echo "TARGET_DIRECTORY: ${TARGET_DIRECTORY}"
 
-        reverse_proxy "${BACKEND_HOST}:${BACKEND_PORT}" "${BASIC_AUTH_HEADER}" "${SERVER_LOCATION}" "${SERVER_NAME}" "${SERVER_PORT}" "${SERVER_PROTOCOL}" "${SERVER_PROXY_PASS}" "${TARGET_DIRECTORY}"
+        reverse_proxy "${BACKEND_HOST}:${BACKEND_PORT}" "${BASIC_AUTH_HEADER}" "${SERVER_LOCATION}" "${SERVER_NAME}" "${SERVER_PORT}" "${SERVER_PORT_EXPOSED}" "${SERVER_PROTOCOL}" "${SERVER_PROXY_PASS}" "${TARGET_DIRECTORY}"
     else
         if [ "${SERVER_NAME}" == "null" ] || [ -z "${SERVER_NAME}" ]; then SERVER_NAME="*"; fi
         SERVER_RESOLVER=$(cat /etc/resolv.conf | grep -i nameserver | head -n1 | cut -d ' ' -f2)
 
         echo "SERVER_NAME: ${SERVER_NAME}"
         echo "SERVER_PORT: ${SERVER_PORT}"
+        echo "SERVER_PORT_EXPOSED: ${SERVER_PORT_EXPOSED}"
         echo "SERVER_RESOLVER: ${SERVER_RESOLVER}"
         echo "TARGET_DIRECTORY: ${TARGET_DIRECTORY}"
 
-        proxy "${SERVER_NAME}" "${SERVER_PORT}" "${SERVER_RESOLVER}" "${TARGET_DIRECTORY}"
+        proxy "${SERVER_NAME}" "${SERVER_PORT}" "${SERVER_PORT_EXPOSED}" "${SERVER_RESOLVER}" "${TARGET_DIRECTORY}"
     fi
 done

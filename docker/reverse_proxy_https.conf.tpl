@@ -26,14 +26,14 @@ server {
 
         proxy_redirect        off;
         # note: not $host:$proxy_port, $proxy_port is backend_port
-        proxy_set_header      Host $host:<SERVER_PORT>;
+        proxy_set_header      Host $host:<SERVER_PORT_EXPOSED>;
         proxy_set_header      X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header      X-Forwarded-Proto "https";
         proxy_set_header      X-Real-IP $remote_addr;
 
         proxy_pass            <SERVER_PROXY_PASS>;
 
-        #sub_filter "http://<SERVER_NAME>:<SERVER_PORT>/" "https://<SERVER_NAME>:<SERVER_PORT>/";
+        #sub_filter "http://<SERVER_NAME>:<SERVER_PORT_EXPOSED>/" "https://<SERVER_NAME>:<SERVER_PORT_EXPOSED>/";
         #sub_filter_once off;
     }
 }
