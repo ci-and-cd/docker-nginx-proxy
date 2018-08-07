@@ -30,8 +30,14 @@ function proxy() {
     echo "target: ${target}"
     echo "template: ${template}"
 
+    if [ "${SKIP_CONF_GENERATION}" == "true" ]; then
+        (>&2 echo "skip conf generation.")
+        return
+    fi
+
     if [ -f ${target} ]; then
         (>&2 echo "${target} already exists, skip.")
+        cat ${target}
         return
     fi
 
@@ -66,8 +72,14 @@ function reverse_proxy() {
     echo "target: ${target}"
     echo "template: ${template}"
 
+    if [ "${SKIP_CONF_GENERATION}" == "true" ]; then
+        (>&2 echo "skip conf generation.")
+        return
+    fi
+
     if [ -f ${target} ]; then
         (>&2 echo "${target} already exists, skip.")
+        cat ${target}
         return
     fi
 
@@ -133,9 +145,16 @@ for row in $(echo "${NGINX_PROXY_CONFIG}" | jq -r '.[] | @base64'); do
         SERVER_MODE="proxy"
     fi
 
-    #echo "${SERVER_NAMES}" | sed -n 1'p' | tr ',' '\n' | while read SERVER_NAME; do echo ${SERVER_NAME}; done
-    if [ "${SERVER_PORT}" == "null" ] || [ -z "${SERVER_PORT}" ]; then SERVER_PORT="80"; fi
-
+    SERVER_PROTOCOL=$(_jq '.server_protocol')
+    if [ "${SERVER_PORT}" == "null" ] || [ -z "${SERVER_PORT}" ]; then
+        if [ "${SERVER_PROTOCOL}" == "http" ]; then
+            if [ "${NONSECUREPORT}" == "null" ] || [ -z "${NONSECUREPORT}" ]; then SERVER_PORT="80"; else SERVER_PORT="${NONSECUREPORT}"; fi
+        elif [ "${SERVER_PROTOCOL}" == "https" ]; then
+            if [ "${SECUREPORT}" == "null" ] || [ -z "${SECUREPORT}" ]; then SERVER_PORT="443"; else SERVER_PORT="${SECUREPORT}"; fi
+        else
+            SERVER_PORT="80"
+        fi
+    fi
 
     if [ "${SERVER_MODE}" == "reverse_proxy" ]; then
         BACKEND_PORT=$(_jq '.port')
@@ -144,7 +163,6 @@ for row in $(echo "${NGINX_PROXY_CONFIG}" | jq -r '.[] | @base64'); do
         BASIC_AUTH_USER=$(_jq '.user')
         SERVER_LOCATION=$(_jq '.server_location')
         SERVER_NAME=$(_jq '.server_name')
-        SERVER_PROTOCOL=$(_jq '.server_protocol')
         SERVER_PROXY_PASS_CONTEXT=$(_jq '.server_proxy_pass_context')
 
         if [ "${BACKEND_PORT}" == "null" ] || [ -z "${BACKEND_PORT}" ]; then BACKEND_PORT="8081"; fi
@@ -155,6 +173,7 @@ for row in $(echo "${NGINX_PROXY_CONFIG}" | jq -r '.[] | @base64'); do
         if [ "${SERVER_LOCATION}" == "null" ] || [ -z "${SERVER_LOCATION}" ]; then SERVER_LOCATION="/"; fi
         if [ "${SERVER_NAME}" == "null" ] || [ -z "${SERVER_NAME}" ]; then SERVER_NAME="nexus"; fi
         if [ "${SERVER_PROTOCOL}" == "null" ] || [ -z "${SERVER_PROTOCOL}" ]; then SERVER_PROTOCOL="http"; fi
+
         SERVER_PROXY_PASS="${BACKEND_PROTOCOL}://backend_${SERVER_PROTOCOL}_${SERVER_NAME}"
         if [ "${SERVER_PROXY_PASS_CONTEXT}" != "null" ] && [ ! -z "${SERVER_PROXY_PASS_CONTEXT}" ]; then SERVER_PROXY_PASS="${SERVER_PROXY_PASS}${SERVER_PROXY_PASS_CONTEXT}"; fi
 

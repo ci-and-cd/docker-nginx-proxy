@@ -11,5 +11,7 @@ services:
     cap_add: # ignored in swarm mode (docker-compose yaml version 3.x)
     - NET_BIND_SERVICE
     command: ["sudo", "nginx", "-g", "daemon off;"]
+    environment:
+    - SKIP_CONF_GENERATION=${SKIP_CONF_GENERATION:-false}
     image: cirepo/nginx-proxy:1.15.0-alpine
     restart: always
