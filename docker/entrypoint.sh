@@ -2,9 +2,15 @@
 
 set -e
 
-if [ ! -L /etc/letsencrypt/live ]; then ln -s /etc/letsencrypt/keys /etc/letsencrypt/live; fi
+echo "whoami $(whoami)"
+echo "ls -la /etc/letsencrypt"
+ls -la /etc/letsencrypt
+if [ ! -L /etc/letsencrypt/live ]; then
+    sudo ln -s /etc/letsencrypt/keys /etc/letsencrypt/live
+    sudo chown nginx:nginx /etc/letsencrypt/live
+fi
 
-if [ "$1" == 'nginx' ]; then
+if ([ "$1" == 'sudo' ] && [ "$2" == nginx ]) || [ "$1" == 'nginx' ]; then
     /render.sh "/etc/nginx/conf.d"
 
     if [ -n "${NONSECUREPORT}" ]; then

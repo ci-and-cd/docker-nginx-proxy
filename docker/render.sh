@@ -96,7 +96,7 @@ function reverse_proxy() {
 # for test (cd docker; ./render.sh $(pwd)/../data)
 #NGINX_PROXY_CONFIG="[\
 #  {\"host\": \"172.16.238.31\", \"port\": 5000, \"pass\": \"\", \"user\": \"\",\
-#    \"server_name\": \"docker-registry.local\", \"server_port\": 443, \"server_protocol\": \"https\"}
+#    \"server_name\": \"docker-registry\", \"server_port\": 443, \"server_protocol\": \"https\"}
 #]
 #"
 
@@ -143,7 +143,7 @@ for row in $(echo "${NGINX_PROXY_CONFIG}" | jq -r '.[] | @base64'); do
             BASIC_AUTH_HEADER="'Basic $(echo -ne "${BASIC_AUTH_USER}:${BASIC_AUTH_PASS}" | base64)'";
         fi
         if [ "${SERVER_LOCATION}" == "null" ] || [ -z "${SERVER_LOCATION}" ]; then SERVER_LOCATION="/"; fi
-        if [ "${SERVER_NAME}" == "null" ] || [ -z "${SERVER_NAME}" ]; then SERVER_NAME="nexus.local"; fi
+        if [ "${SERVER_NAME}" == "null" ] || [ -z "${SERVER_NAME}" ]; then SERVER_NAME="nexus"; fi
         if [ "${SERVER_PROTOCOL}" == "null" ] || [ -z "${SERVER_PROTOCOL}" ]; then SERVER_PROTOCOL="http"; fi
         SERVER_PROXY_PASS="${BACKEND_PROTOCOL}://backend_${SERVER_PROTOCOL}_${SERVER_NAME}"
         if [ "${SERVER_PROXY_PASS_CONTEXT}" != "null" ] && [ ! -z "${SERVER_PROXY_PASS_CONTEXT}" ]; then SERVER_PROXY_PASS="${SERVER_PROXY_PASS}${SERVER_PROXY_PASS_CONTEXT}"; fi
@@ -159,7 +159,7 @@ for row in $(echo "${NGINX_PROXY_CONFIG}" | jq -r '.[] | @base64'); do
 
         reverse_proxy "${BACKEND_HOST}:${BACKEND_PORT}" "${BASIC_AUTH_HEADER}" "${SERVER_LOCATION}" "${SERVER_NAME}" "${SERVER_PORT}" "${SERVER_PROTOCOL}" "${SERVER_PROXY_PASS}" "${TARGET_DIRECTORY}"
     else
-        if [ "${SERVER_NAME}" == "null" ] || [ -z "${SERVER_NAME}" ]; then SERVER_NAME="*.local"; fi
+        if [ "${SERVER_NAME}" == "null" ] || [ -z "${SERVER_NAME}" ]; then SERVER_NAME="*"; fi
         SERVER_RESOLVER=$(cat /etc/resolv.conf | grep -i nameserver | head -n1 | cut -d ' ' -f2)
 
         echo "SERVER_NAME: ${SERVER_NAME}"

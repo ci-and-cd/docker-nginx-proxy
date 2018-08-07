@@ -8,6 +8,8 @@ services:
       args:
       #- IMAGE_ARG_ALPINE_MIRROR=${IMAGE_ARG_ALPINE_MIRROR}
       - IMAGE_ARG_ALPINE_MIRROR=${IMAGE_ARG_ALPINE_MIRROR:-mirror.tuna.tsinghua.edu.cn}
-    command: ["nginx", "-g", "daemon off;"]
+    cap_add: # ignored in swarm mode (docker-compose yaml version 3.x)
+    - NET_BIND_SERVICE
+    command: ["sudo", "nginx", "-g", "daemon off;"]
     image: cirepo/nginx-proxy:1.15.0-alpine
     restart: always

@@ -31,4 +31,4 @@ USER nginx
 # During the renewal /etc/letsencrypt/live symlinks to the latest versions
 VOLUME ["/etc/letsencrypt/archive", "/etc/letsencrypt/keys", "/etc/nginx/conf.d", "/var/cache/nginx", "/var/log/letsencrypt", "/var/log/nginx"]
 ENTRYPOINT ["/entrypoint.sh"]
-CMD ["nginx", "-g", "daemon off;"]
+CMD ["sudo", "nginx", "-g", "daemon off;"]
