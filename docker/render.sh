@@ -37,7 +37,7 @@ function proxy() {
         return
     fi
 
-    if [ -f ${target} ]; then
+    if [ -f ${target} ] && [ "${OVERWRITE_EXISTING_CONF}" != "true" ]; then
         (>&2 echo "${target} already exists, skip.")
         cat ${target}
         return
@@ -82,7 +82,7 @@ function reverse_proxy() {
         return
     fi
 
-    if [ -f ${target} ]; then
+    if [ -f ${target} ] && [ "${OVERWRITE_EXISTING_CONF}" != "true" ]; then
         (>&2 echo "${target} already exists, skip.")
         cat ${target}
         return
