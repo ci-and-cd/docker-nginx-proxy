@@ -30,6 +30,11 @@ function proxy() {
     echo "target: ${target}"
     echo "template: ${template}"
 
+    if [ -f ${target} ]; then
+        (>&2 echo "${target} already exists, skip.")
+        return
+    fi
+
     sed "s#<SERVER_PORT>#${server_port}#" ${template} | \
         sed "s#<SERVER_RESOLVER>#${server_resolver}#" | \
         sed "s#<SERVER_NAME>#${server_name}#" > ${target}
@@ -60,6 +65,11 @@ function reverse_proxy() {
     echo "target_directory: ${target_directory}"
     echo "target: ${target}"
     echo "template: ${template}"
+
+    if [ -f ${target} ]; then
+        (>&2 echo "${target} already exists, skip.")
+        return
+    fi
 
     sed "s#<BACKEND_HOST_PORT>#${backend_host_port}#; s#<SERVER_PORT>#${server_port}#" ${template} | \
         sed "s#<SERVER_LOCATION>#${server_location}#" | \

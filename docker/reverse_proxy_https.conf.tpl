@@ -8,7 +8,7 @@ server {
 
 
     listen                    <SERVER_PORT> ssl http2;
-    listen                    [::]:<SERVER_PORT> ssl http2;
+    #listen                    [::]:<SERVER_PORT> ssl http2 ipv6only=on;
     server_name               <SERVER_NAME>;
 
     # [warn] the "ssl" directive is deprecated, use the "listen ... ssl" directive instead
