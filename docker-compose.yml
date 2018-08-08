@@ -45,7 +45,7 @@ services:
             "server_location": "~ ^/(.*)", "server_name": "fileserver${DOT_INSTANCE_DOMAIN:-}", "server_port": ${NONSECUREPORT:-1080}, "server_protocol": "http",
             "server_proxy_pass_context": "/nexus/repository/files/$$1"},
 
-          {"host": "172.16.238.21", "port": ${GIT_HTTP_PORT:-10080}, "protocol": "http", "anonymous": "read",
+          {"host": "172.16.238.21", "port": ${GIT_HTTP_PORT:-10080}, "protocol": "http", "anonymous": "false",
             "server_location": "/", "server_name": "git${DOT_INSTANCE_DOMAIN:-}", "server_port": ${NONSECUREPORT:-1080}, "server_protocol": "http"},
 
           {"host": "172.16.238.31", "port": ${NEXUS3_PORT:-28081}, "protocol": "http", "anonymous": "read", "pass": "${BASIC_AUTH_PASS:-deployment}", "user": "${BASIC_AUTH_USER:-deployment}",
@@ -61,7 +61,7 @@ services:
           {"host": "172.16.238.31", "port": ${NEXUS3_PORT:-28081}, "protocol": "http", "anonymous": "read", "pass": "${BASIC_AUTH_PASS:-deployment}", "user": "${BASIC_AUTH_USER:-deployment}",
               "server_location": "/", "server_name": "npm${DOT_INSTANCE_DOMAIN:-}", "server_port": ${NONSECUREPORT:-1080}, "server_protocol": "http"},
 
-          {"host": "172.16.238.67", "port": ${SONARQUBE_EXTERNAL_PORT:-9000}, "protocol": "http", "anonymous": "read",
+          {"host": "172.16.238.67", "port": ${SONARQUBE_EXTERNAL_PORT:-9000}, "protocol": "http", "anonymous": "false",
               "server_location": "/", "server_name": "sonar${DOT_INSTANCE_DOMAIN:-}", "server_port": ${NONSECUREPORT:-1080}, "server_protocol": "http"}
         ]
 

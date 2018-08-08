@@ -1,19 +1,5 @@
 #!/usr/bin/env sh
 
-
-# tests:
-#
-#BACKEND_HOST="nexus3" BACKEND_PORT="28081" SERVER_NAMES="nexus3.example.org,nexus3.example.net" SERVER_PROTOCOL="http" ./render.sh $(pwd)/../data
-#BACKEND_HOST="nexus3" BACKEND_PORT="28081" SERVER_NAMES="nexus3.example.org,nexus3.example.net" SERVER_PROTOCOL="https" ./render.sh $(pwd)/../data
-#./render.sh $(pwd)/../data
-
-# in container
-#docker run --rm -it cirepo/nginx-proxy:1.15.0-alpine /bin/sh
-#BACKEND_HOST="nexus3" BACKEND_PORT="28081" SERVER_NAMES="nexus3.example.org,nexus3.example.net" SERVER_PROTOCOL="http" ./render.sh /etc/nginx/conf.d
-#BACKEND_HOST="nexus3" BACKEND_PORT="28081" SERVER_NAMES="nexus3.example.org,nexus3.example.net" SERVER_PROTOCOL="https" ./render.sh /etc/nginx/conf.d
-#./render.sh /etc/nginx/conf.d
-
-
 # arguments: server_name, server_port, server_port_exposed, server_resolver, target_directory
 function proxy() {
     local server_name="$1"
@@ -134,12 +120,102 @@ function reverse_proxy() {
     cat ${target}
 }
 
-# for test (cd docker; ./render.sh $(pwd)/../data)
-#NGINX_PROXY_CONFIG="[\
-#  {\"host\": \"172.16.238.31\", \"port\": 5000, \"pass\": \"\", \"user\": \"\",\
-#    \"server_name\": \"docker-registry\", \"server_port\": 443, \"server_protocol\": \"https\"}
-#]
-#"
+# arguments: row
+function render_conf() {
+    local row="$1"
+
+    _jq() {
+     echo ${row} | base64 -d | jq -r ${1}
+    }
+
+    local anonymous=$(_jq '.anonymous')
+    local backend_host=$(_jq '.host')
+    local server_name=$(_jq '.server_name')
+    local server_port=$(_jq '.server_port')
+    local server_port_exposed=$(_jq '.server_port_exposed')
+
+    local server_mode=""
+    if [ "${backend_host}" != "null" ] && [ ! -z "${backend_host}" ]; then
+        # reverse_proxy mode
+        (>&2 echo "backend_host not null, reverse_proxy mode.")
+        server_mode="reverse_proxy"
+    else
+        # proxy mode
+        (>&2 echo "backend_host is null, proxy mode.")
+        server_mode="proxy"
+    fi
+
+    local server_protocol=$(_jq '.server_protocol')
+    if [ "${server_port}" == "null" ] || [ -z "${server_port}" ]; then
+        if [ "${server_protocol}" == "http" ]; then
+            if [ "${NONSECUREPORT}" == "null" ] || [ -z "${NONSECUREPORT}" ]; then server_port="80"; else server_port="${NONSECUREPORT}"; fi
+        elif [ "${server_protocol}" == "https" ]; then
+            if [ "${SECUREPORT}" == "null" ] || [ -z "${SECUREPORT}" ]; then server_port="443"; else server_port="${SECUREPORT}"; fi
+        else
+            server_port="80"
+        fi
+    fi
+
+    if [ "${server_port_exposed}" == "null" ] || [ -z "${server_port_exposed}" ]; then
+        if [ "${server_protocol}" == "http" ]; then
+            if [ "${NONSECUREPORT_EXPOSED}" == "null" ] || [ -z "${NONSECUREPORT_EXPOSED}" ]; then server_port_exposed="80"; else server_port_exposed="${NONSECUREPORT_EXPOSED}"; fi
+        elif [ "${server_protocol}" == "https" ]; then
+            if [ "${SECUREPORT_EXPOSED}" == "null" ] || [ -z "${SECUREPORT_EXPOSED}" ]; then server_port_exposed="443"; else server_port_exposed="${SECUREPORT_EXPOSED}"; fi
+        else
+            server_port_exposed="80"
+        fi
+    fi
+
+    if [ "${server_mode}" == "reverse_proxy" ]; then
+        local backend_port=$(_jq '.port')
+        local backend_protocol=$(_jq '.protocol')
+        local basic_auth_pass=$(_jq '.pass')
+        local basic_auth_user=$(_jq '.user')
+        local server_location=$(_jq '.server_location')
+        local server_proxy_pass_context=$(_jq '.server_proxy_pass_context')
+
+        if [ "${anonymous}" == "null" ] || [ -z "${anonymous}" ]; then anonymous="false"; fi
+        if [ "${backend_port}" == "null" ] || [ -z "${backend_port}" ]; then backend_port="8081"; fi
+        if [ "${backend_protocol}" == "null" ] || [ -z "${backend_protocol}" ]; then backend_protocol="http"; fi
+
+        local auth_header=""
+        if [ "${basic_auth_pass}" != "null" ] && [ ! -z "${basic_auth_pass}" ] && [ "${basic_auth_user}" != "null" ] && [ ! -z "${basic_auth_user}" ]; then
+            auth_header="Basic $(echo -ne "${basic_auth_user}:${basic_auth_pass}" | base64)";
+        fi
+
+        if [ "${server_location}" == "null" ] || [ -z "${server_location}" ]; then server_location="/"; fi
+        if [ "${server_name}" == "null" ] || [ -z "${server_name}" ]; then server_name="nexus"; fi
+        if [ "${server_protocol}" == "null" ] || [ -z "${server_protocol}" ]; then server_protocol="http"; fi
+
+        local server_proxy_pass="${backend_protocol}://backend_${server_protocol}_${server_name}"
+        if [ "${server_proxy_pass_context}" != "null" ] && [ ! -z "${server_proxy_pass_context}" ]; then server_proxy_pass="${server_proxy_pass}${server_proxy_pass_context}"; fi
+
+        (>&2 echo "anonymous: ${anonymous}")
+        (>&2 echo "backend_host: ${backend_host}, backend_port: ${backend_port}, backend_protocol: ${backend_protocol}")
+        (>&2 echo "auth_header: ${auth_header}")
+        (>&2 echo "server_location: ${server_location}")
+        (>&2 echo "server_name: ${server_name}")
+        (>&2 echo "server_port: ${server_port}")
+        (>&2 echo "server_port_exposed: ${server_port_exposed}")
+        (>&2 echo "server_protocol: ${server_protocol}")
+        (>&2 echo "server_proxy_pass: ${server_proxy_pass}")
+        (>&2 echo "TARGET_DIRECTORY: ${TARGET_DIRECTORY}")
+
+        reverse_proxy "${anonymous}" "${auth_header}" "${backend_host}:${backend_port}" "${server_location}" "${server_name}" "${server_port}" "${server_port_exposed}" "${server_protocol}" "${server_proxy_pass}" "${TARGET_DIRECTORY}"
+    else
+        if [ "${server_name}" == "null" ] || [ -z "${server_name}" ]; then server_name="*"; fi
+        local server_resolver=$(cat /etc/resolv.conf | grep -i nameserver | head -n1 | cut -d ' ' -f2)
+
+        (>&2 echo "server_name: ${server_name}")
+        (>&2 echo "server_port: ${server_port}")
+        (>&2 echo "server_port_exposed: ${server_port_exposed}")
+        (>&2 echo "server_resolver: ${server_resolver}")
+        (>&2 echo "TARGET_DIRECTORY: ${TARGET_DIRECTORY}")
+
+        proxy "${server_name}" "${server_port}" "${server_port_exposed}" "${server_resolver}" "${TARGET_DIRECTORY}"
+    fi
+}
+
 
 TARGET_DIRECTORY="$1"
 
@@ -152,90 +228,5 @@ if [ "${OVERWRITE_EXISTING_CONF}" == "true" ]; then
 fi
 
 for row in $(echo "${NGINX_PROXY_CONFIG}" | jq -r '.[] | @base64'); do
-    _jq() {
-     echo ${row} | base64 -d | jq -r ${1}
-    }
-
-    ANONYMOUS=$(_jq '.anonymous')
-    BACKEND_HOST=$(_jq '.host')
-    SERVER_PORT=$(_jq '.server_port')
-    SERVER_PORT_EXPOSED=$(_jq '.server_port_exposed')
-
-    if [ "${BACKEND_HOST}" != "null" ] && [ ! -z "${BACKEND_HOST}" ]; then
-        # reverse_proxy mode
-        (>&2 echo "BACKEND_HOST not null, reverse_proxy mode.")
-        SERVER_MODE="reverse_proxy"
-    else
-        # proxy mode
-        (>&2 echo "BACKEND_HOST is null, proxy mode.")
-        SERVER_MODE="proxy"
-    fi
-
-    SERVER_PROTOCOL=$(_jq '.server_protocol')
-    if [ "${SERVER_PORT}" == "null" ] || [ -z "${SERVER_PORT}" ]; then
-        if [ "${SERVER_PROTOCOL}" == "http" ]; then
-            if [ "${NONSECUREPORT}" == "null" ] || [ -z "${NONSECUREPORT}" ]; then SERVER_PORT="80"; else SERVER_PORT="${NONSECUREPORT}"; fi
-        elif [ "${SERVER_PROTOCOL}" == "https" ]; then
-            if [ "${SECUREPORT}" == "null" ] || [ -z "${SECUREPORT}" ]; then SERVER_PORT="443"; else SERVER_PORT="${SECUREPORT}"; fi
-        else
-            SERVER_PORT="80"
-        fi
-    fi
-
-    if [ "${SERVER_PORT_EXPOSED}" == "null" ] || [ -z "${SERVER_PORT_EXPOSED}" ]; then
-        if [ "${SERVER_PROTOCOL}" == "http" ]; then
-            if [ "${NONSECUREPORT_EXPOSED}" == "null" ] || [ -z "${NONSECUREPORT_EXPOSED}" ]; then SERVER_PORT_EXPOSED="80"; else SERVER_PORT_EXPOSED="${NONSECUREPORT_EXPOSED}"; fi
-        elif [ "${SERVER_PROTOCOL}" == "https" ]; then
-            if [ "${SECUREPORT_EXPOSED}" == "null" ] || [ -z "${SECUREPORT_EXPOSED}" ]; then SERVER_PORT_EXPOSED="443"; else SERVER_PORT_EXPOSED="${SECUREPORT_EXPOSED}"; fi
-        else
-            SERVER_PORT_EXPOSED="80"
-        fi
-    fi
-
-    if [ "${SERVER_MODE}" == "reverse_proxy" ]; then
-        BACKEND_PORT=$(_jq '.port')
-        BACKEND_PROTOCOL=$(_jq '.protocol')
-        BASIC_AUTH_PASS=$(_jq '.pass')
-        BASIC_AUTH_USER=$(_jq '.user')
-        SERVER_LOCATION=$(_jq '.server_location')
-        SERVER_NAME=$(_jq '.server_name')
-        SERVER_PROXY_PASS_CONTEXT=$(_jq '.server_proxy_pass_context')
-
-        if [ "${ANONYMOUS}" == "null" ] || [ -z "${ANONYMOUS}" ]; then ANONYMOUS="false"; fi
-        if [ "${BACKEND_PORT}" == "null" ] || [ -z "${BACKEND_PORT}" ]; then BACKEND_PORT="8081"; fi
-        if [ "${BACKEND_PROTOCOL}" == "null" ] || [ -z "${BACKEND_PROTOCOL}" ]; then BACKEND_PROTOCOL="http"; fi
-        if [ "${BASIC_AUTH_PASS}" != "null" ] && [ ! -z "${BASIC_AUTH_PASS}" ] && [ "${BASIC_AUTH_USER}" != "null" ] && [ ! -z "${BASIC_AUTH_USER}" ]; then
-            AUTH_HEADER="Basic $(echo -ne "${BASIC_AUTH_USER}:${BASIC_AUTH_PASS}" | base64)";
-        fi
-        if [ "${SERVER_LOCATION}" == "null" ] || [ -z "${SERVER_LOCATION}" ]; then SERVER_LOCATION="/"; fi
-        if [ "${SERVER_NAME}" == "null" ] || [ -z "${SERVER_NAME}" ]; then SERVER_NAME="nexus"; fi
-        if [ "${SERVER_PROTOCOL}" == "null" ] || [ -z "${SERVER_PROTOCOL}" ]; then SERVER_PROTOCOL="http"; fi
-
-        SERVER_PROXY_PASS="${BACKEND_PROTOCOL}://backend_${SERVER_PROTOCOL}_${SERVER_NAME}"
-        if [ "${SERVER_PROXY_PASS_CONTEXT}" != "null" ] && [ ! -z "${SERVER_PROXY_PASS_CONTEXT}" ]; then SERVER_PROXY_PASS="${SERVER_PROXY_PASS}${SERVER_PROXY_PASS_CONTEXT}"; fi
-
-        (>&2 echo "ANONYMOUS: ${ANONYMOUS}")
-        (>&2 echo "BACKEND_HOST: ${BACKEND_HOST}, BACKEND_PORT: ${BACKEND_PORT}, BACKEND_PROTOCOL: ${BACKEND_PROTOCOL}")
-        (>&2 echo "AUTH_HEADER: ${AUTH_HEADER}")
-        (>&2 echo "SERVER_LOCATION: ${SERVER_LOCATION}")
-        (>&2 echo "SERVER_NAME: ${SERVER_NAME}")
-        (>&2 echo "SERVER_PORT: ${SERVER_PORT}")
-        (>&2 echo "SERVER_PORT_EXPOSED: ${SERVER_PORT_EXPOSED}")
-        (>&2 echo "SERVER_PROTOCOL: ${SERVER_PROTOCOL}")
-        (>&2 echo "SERVER_PROXY_PASS: ${SERVER_PROXY_PASS}")
-        (>&2 echo "TARGET_DIRECTORY: ${TARGET_DIRECTORY}")
-
-        reverse_proxy "${ANONYMOUS}" "${AUTH_HEADER}" "${BACKEND_HOST}:${BACKEND_PORT}" "${SERVER_LOCATION}" "${SERVER_NAME}" "${SERVER_PORT}" "${SERVER_PORT_EXPOSED}" "${SERVER_PROTOCOL}" "${SERVER_PROXY_PASS}" "${TARGET_DIRECTORY}"
-    else
-        if [ "${SERVER_NAME}" == "null" ] || [ -z "${SERVER_NAME}" ]; then SERVER_NAME="*"; fi
-        SERVER_RESOLVER=$(cat /etc/resolv.conf | grep -i nameserver | head -n1 | cut -d ' ' -f2)
-
-        (>&2 echo "SERVER_NAME: ${SERVER_NAME}")
-        (>&2 echo "SERVER_PORT: ${SERVER_PORT}")
-        (>&2 echo "SERVER_PORT_EXPOSED: ${SERVER_PORT_EXPOSED}")
-        (>&2 echo "SERVER_RESOLVER: ${SERVER_RESOLVER}")
-        (>&2 echo "TARGET_DIRECTORY: ${TARGET_DIRECTORY}")
-
-        proxy "${SERVER_NAME}" "${SERVER_PORT}" "${SERVER_PORT_EXPOSED}" "${SERVER_RESOLVER}" "${TARGET_DIRECTORY}"
-    fi
+    render_conf "${row}"
 done
