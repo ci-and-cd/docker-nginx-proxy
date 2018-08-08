@@ -138,6 +138,11 @@ TARGET_DIRECTORY="$1"
 echo NGINX_PROXY_CONFIG: ${NGINX_PROXY_CONFIG}
 echo TARGET_DIRECTORY: ${TARGET_DIRECTORY}
 
+if [ "${OVERWRITE_EXISTING_CONF}" == "true" ]; then
+    (>&2 echo "rm -rf ${TARGET_DIRECTORY}/*.conf")
+    rm -rf ${TARGET_DIRECTORY}/*.conf
+fi
+
 for row in $(echo "${NGINX_PROXY_CONFIG}" | jq -r '.[] | @base64'); do
     _jq() {
      echo ${row} | base64 -d | jq -r ${1}
