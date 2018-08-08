@@ -52,22 +52,23 @@ function proxy() {
     cat ${target}
 }
 
-# arguments: backend_host_port, basic_auth_header, server_location, server_name, server_port, server_port_exposed, server_protocol, server_proxy_pass, target_directory
+# arguments: anonymous (access, false, read, write), auth_header, backend_host_port, server_location, server_name, server_port, server_port_exposed, server_protocol, server_proxy_pass, target_directory
 function reverse_proxy() {
-    local backend_host_port="$1"
-    local basic_auth_header="$2"
-    local server_location="$3"
-    local server_name="$4"
-    local server_port="$5"
-    local server_port_exposed="$6"
-    local server_protocol="$7"
-    local server_proxy_pass="$8"
-    local target_directory="$9"
+    local anonymous="$1"
+    local auth_header="$2"
+    local backend_host_port="$3"
+    local server_location="$4"
+    local server_name="$5"
+    local server_port="$6"
+    local server_port_exposed="$7"
+    local server_protocol="$8"
+    local server_proxy_pass="$9"
+    local target_directory="${10}"
     local target="${target_directory}/reverse_proxy_${server_protocol}_${server_name}.conf"
     local template="reverse_proxy_${server_protocol}.conf.tpl"
 
     (>&2 echo "backend_host_port: ${backend_host_port}")
-    (>&2 echo "basic_auth_header: ${basic_auth_header}")
+    (>&2 echo "auth_header: ${auth_header}")
     (>&2 echo "server_location: ${server_location}")
     (>&2 echo "server_name: ${server_name}")
     (>&2 echo "server_port: ${server_port}")
@@ -77,6 +78,19 @@ function reverse_proxy() {
     (>&2 echo "target_directory: ${target_directory}")
     (>&2 echo "target: ${target}")
     (>&2 echo "template: ${template}")
+
+    local anonymous_access='false'
+    local anonymous_read='false'
+    local anonymous_write='false'
+    if [ "${anonymous}" == "access" ]; then
+        anonymous_access='$http_authorization'
+        anonymous_read='$http_authorization'
+        anonymous_write='$http_authorization'
+    elif [ "${anonymous}" == "read" ]; then
+        anonymous_read='$http_authorization'
+    elif [ "${anonymous}" == "write" ]; then
+        anonymous_write='$http_authorization'
+    fi
 
     local server_domain=""
     if [ "${server_protocol}" == "https" ]; then
@@ -100,26 +114,20 @@ function reverse_proxy() {
     fi
 
     sed "s#<BACKEND_HOST_PORT>#${backend_host_port}#; s#<SERVER_PORT>#${server_port}#" ${template} | \
+        sed "s#<ANONYMOUS_ACCESS>#${anonymous_access}#" | \
+        sed "s#<ANONYMOUS_READ>#${anonymous_read}#" | \
+        sed "s#<ANONYMOUS_WRITE>#${anonymous_write}#" | \
+        sed "s#<AUTH_HEADER>#${auth_header}#" | \
         sed "s#<SERVER_PORT_EXPOSED>#${server_port_exposed}#" | \
         sed "s#<SERVER_LOCATION>#${server_location}#" | \
         sed "s#<SERVER_NAME>#${server_name}#" | \
         sed "s#<SERVER_PROXY_PASS>#${server_proxy_pass}#" | \
         sed "s|<SERVER_DOMAIN>|${server_domain}|" > ${target}
 
-    # replace
-    #    <BASIC_AUTH_SETTING>
-    # to
-    #    # add basic auth header
-    #    set $authorization $http_authorization;
-    #    if ($authorization = '') {
-    #      set $authorization ${basic_auth_header};
-    #    }
-    #    proxy_set_header Authorization $authorization;
-    # if BASIC_AUTH_HEADER present
-    if [ ! -z "${basic_auth_header}" ]; then
-        sed -i "s|<BASIC_AUTH_SETTING>|# add basic auth header\\n    set \$authorization \$http_authorization;\\n    if (\$authorization = '') {\\n      set \$authorization ${basic_auth_header};\\n    }\\n    proxy_set_header Authorization \$authorization;|" ${target}
+    if [ "${anonymous_access}" != "false" ] || [ "${anonymous_read}" != "false" ] || [ "${anonymous_write}" != "false" ]; then
+        sed -i 's|<PROXY_SET_HEADER_AUTHORIZATION>|proxy_set_header Authorization $authorization;|' ${target}
     else
-        sed -i "s|<BASIC_AUTH_SETTING>|# no basic auth header|" ${target}
+        sed -i 's|<PROXY_SET_HEADER_AUTHORIZATION>|#anonymous_access not allowed|' ${target}
     fi
 
     (>&2 echo "${target} content:")
@@ -148,6 +156,7 @@ for row in $(echo "${NGINX_PROXY_CONFIG}" | jq -r '.[] | @base64'); do
      echo ${row} | base64 -d | jq -r ${1}
     }
 
+    ANONYMOUS=$(_jq '.anonymous')
     BACKEND_HOST=$(_jq '.host')
     SERVER_PORT=$(_jq '.server_port')
     SERVER_PORT_EXPOSED=$(_jq '.server_port_exposed')
@@ -192,10 +201,11 @@ for row in $(echo "${NGINX_PROXY_CONFIG}" | jq -r '.[] | @base64'); do
         SERVER_NAME=$(_jq '.server_name')
         SERVER_PROXY_PASS_CONTEXT=$(_jq '.server_proxy_pass_context')
 
+        if [ "${ANONYMOUS}" == "null" ] || [ -z "${ANONYMOUS}" ]; then ANONYMOUS="false"; fi
         if [ "${BACKEND_PORT}" == "null" ] || [ -z "${BACKEND_PORT}" ]; then BACKEND_PORT="8081"; fi
         if [ "${BACKEND_PROTOCOL}" == "null" ] || [ -z "${BACKEND_PROTOCOL}" ]; then BACKEND_PROTOCOL="http"; fi
         if [ "${BASIC_AUTH_PASS}" != "null" ] && [ ! -z "${BASIC_AUTH_PASS}" ] && [ "${BASIC_AUTH_USER}" != "null" ] && [ ! -z "${BASIC_AUTH_USER}" ]; then
-            BASIC_AUTH_HEADER="'Basic $(echo -ne "${BASIC_AUTH_USER}:${BASIC_AUTH_PASS}" | base64)'";
+            AUTH_HEADER="Basic $(echo -ne "${BASIC_AUTH_USER}:${BASIC_AUTH_PASS}" | base64)";
         fi
         if [ "${SERVER_LOCATION}" == "null" ] || [ -z "${SERVER_LOCATION}" ]; then SERVER_LOCATION="/"; fi
         if [ "${SERVER_NAME}" == "null" ] || [ -z "${SERVER_NAME}" ]; then SERVER_NAME="nexus"; fi
@@ -204,8 +214,9 @@ for row in $(echo "${NGINX_PROXY_CONFIG}" | jq -r '.[] | @base64'); do
         SERVER_PROXY_PASS="${BACKEND_PROTOCOL}://backend_${SERVER_PROTOCOL}_${SERVER_NAME}"
         if [ "${SERVER_PROXY_PASS_CONTEXT}" != "null" ] && [ ! -z "${SERVER_PROXY_PASS_CONTEXT}" ]; then SERVER_PROXY_PASS="${SERVER_PROXY_PASS}${SERVER_PROXY_PASS_CONTEXT}"; fi
 
+        (>&2 echo "ANONYMOUS: ${ANONYMOUS}")
         (>&2 echo "BACKEND_HOST: ${BACKEND_HOST}, BACKEND_PORT: ${BACKEND_PORT}, BACKEND_PROTOCOL: ${BACKEND_PROTOCOL}")
-        (>&2 echo "BASIC_AUTH_HEADER: ${BASIC_AUTH_HEADER}")
+        (>&2 echo "AUTH_HEADER: ${AUTH_HEADER}")
         (>&2 echo "SERVER_LOCATION: ${SERVER_LOCATION}")
         (>&2 echo "SERVER_NAME: ${SERVER_NAME}")
         (>&2 echo "SERVER_PORT: ${SERVER_PORT}")
@@ -214,7 +225,7 @@ for row in $(echo "${NGINX_PROXY_CONFIG}" | jq -r '.[] | @base64'); do
         (>&2 echo "SERVER_PROXY_PASS: ${SERVER_PROXY_PASS}")
         (>&2 echo "TARGET_DIRECTORY: ${TARGET_DIRECTORY}")
 
-        reverse_proxy "${BACKEND_HOST}:${BACKEND_PORT}" "${BASIC_AUTH_HEADER}" "${SERVER_LOCATION}" "${SERVER_NAME}" "${SERVER_PORT}" "${SERVER_PORT_EXPOSED}" "${SERVER_PROTOCOL}" "${SERVER_PROXY_PASS}" "${TARGET_DIRECTORY}"
+        reverse_proxy "${ANONYMOUS}" "${AUTH_HEADER}" "${BACKEND_HOST}:${BACKEND_PORT}" "${SERVER_LOCATION}" "${SERVER_NAME}" "${SERVER_PORT}" "${SERVER_PORT_EXPOSED}" "${SERVER_PROTOCOL}" "${SERVER_PROXY_PASS}" "${TARGET_DIRECTORY}"
     else
         if [ "${SERVER_NAME}" == "null" ] || [ -z "${SERVER_NAME}" ]; then SERVER_NAME="*"; fi
         SERVER_RESOLVER=$(cat /etc/resolv.conf | grep -i nameserver | head -n1 | cut -d ' ' -f2)
