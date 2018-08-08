@@ -78,12 +78,13 @@ function reverse_proxy() {
     (>&2 echo "target: ${target}")
     (>&2 echo "template: ${template}")
 
+    local server_domain=""
     if [ "${server_protocol}" == "https" ]; then
         # see: https://stackoverflow.com/questions/25204179/removing-subdomain-with-bash
-        if [ -z "${SERVER_DOMAIN}" ]; then SERVER_DOMAIN=$(expr match "${server_name}" '.*\.\(.*\..*\)'); fi
-        if [ -z "${SERVER_DOMAIN}" ]; then SERVER_DOMAIN="${server_name}"; fi
+        if [ -z "${SERVER_DOMAIN}" ]; then server_domain=$(expr match "${server_name}" '.*\.\(.*\..*\)'); fi
+        if [ -z "${server_domain}" ]; then server_domain="${server_name}"; fi
     fi
-    (>&2 echo "SERVER_DOMAIN: ${SERVER_DOMAIN}")
+    (>&2 echo "server_domain: ${server_domain}")
 
     (>&2 echo "SKIP_CONF_GENERATION: ${SKIP_CONF_GENERATION}")
     if [ "${SKIP_CONF_GENERATION}" == "true" ]; then
@@ -103,7 +104,7 @@ function reverse_proxy() {
         sed "s#<SERVER_LOCATION>#${server_location}#" | \
         sed "s#<SERVER_NAME>#${server_name}#" | \
         sed "s#<SERVER_PROXY_PASS>#${server_proxy_pass}#" | \
-        sed -i "s|<SERVER_DOMAIN>|${SERVER_DOMAIN}|" > ${target}
+        sed "s|<SERVER_DOMAIN>|${server_domain}|" > ${target}
 
     # replace
     #    <BASIC_AUTH_SETTING>
