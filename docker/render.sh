@@ -24,13 +24,13 @@ function proxy() {
     local target="${target_directory}/proxy_${server_name}.conf"
     local template="proxy_http.conf.tpl"
 
-    echo "server_name: ${server_name}"
-    echo "server_port: ${server_port}"
-    echo "server_port_exposed: ${server_port_exposed}"
-    echo "server_resolver: ${server_resolver}"
-    echo "target_directory: ${target_directory}"
-    echo "target: ${target}"
-    echo "template: ${template}"
+    (>&2 echo "server_name: ${server_name}")
+    (>&2 echo "server_port: ${server_port}")
+    (>&2 echo "server_port_exposed: ${server_port_exposed}")
+    (>&2 echo "server_resolver: ${server_resolver}")
+    (>&2 echo "target_directory: ${target_directory}")
+    (>&2 echo "target: ${target}")
+    (>&2 echo "template: ${template}")
 
     if [ "${SKIP_CONF_GENERATION}" == "true" ]; then
         (>&2 echo "skip conf generation.")
@@ -48,7 +48,7 @@ function proxy() {
         sed "s#<SERVER_RESOLVER>#${server_resolver}#" | \
         sed "s#<SERVER_NAME>#${server_name}#" > ${target}
 
-    echo "${target} content:"
+    (>&2 echo "${target} content:")
     cat ${target}
 }
 
@@ -66,22 +66,32 @@ function reverse_proxy() {
     local target="${target_directory}/reverse_proxy_${server_protocol}_${server_name}.conf"
     local template="reverse_proxy_${server_protocol}.conf.tpl"
 
-    echo "backend_host_port: ${backend_host_port}"
-    echo "basic_auth_header: ${basic_auth_header}"
-    echo "server_location: ${server_location}"
-    echo "server_name: ${server_name}"
-    echo "server_port: ${server_port}"
-    echo "server_port_exposed: ${server_port_exposed}"
-    echo "server_proxy_pass: ${server_proxy_pass}"
-    echo "target_directory: ${target_directory}"
-    echo "target: ${target}"
-    echo "template: ${template}"
+    (>&2 echo "backend_host_port: ${backend_host_port}")
+    (>&2 echo "basic_auth_header: ${basic_auth_header}")
+    (>&2 echo "server_location: ${server_location}")
+    (>&2 echo "server_name: ${server_name}")
+    (>&2 echo "server_port: ${server_port}")
+    (>&2 echo "server_port_exposed: ${server_port_exposed}")
+    (>&2 echo "server_protocol: ${server_protocol}")
+    (>&2 echo "server_proxy_pass: ${server_proxy_pass}")
+    (>&2 echo "target_directory: ${target_directory}")
+    (>&2 echo "target: ${target}")
+    (>&2 echo "template: ${template}")
 
+    if [ "${server_protocol}" == "https" ]; then
+        # see: https://stackoverflow.com/questions/25204179/removing-subdomain-with-bash
+        if [ -z "${SERVER_DOMAIN}" ]; then SERVER_DOMAIN=$(expr match "${server_name}" '.*\.\(.*\..*\)'); fi
+        if [ -z "${SERVER_DOMAIN}" ]; then SERVER_DOMAIN="${server_name}"; fi
+    fi
+    (>&2 echo "SERVER_DOMAIN: ${SERVER_DOMAIN}")
+
+    (>&2 echo "SKIP_CONF_GENERATION: ${SKIP_CONF_GENERATION}")
     if [ "${SKIP_CONF_GENERATION}" == "true" ]; then
         (>&2 echo "skip conf generation.")
         return
     fi
 
+    (>&2 echo "OVERWRITE_EXISTING_CONF: ${OVERWRITE_EXISTING_CONF}")
     if [ -f ${target} ] && [ "${OVERWRITE_EXISTING_CONF}" != "true" ]; then
         (>&2 echo "${target} already exists, skip.")
         cat ${target}
@@ -92,14 +102,8 @@ function reverse_proxy() {
         sed "s#<SERVER_PORT_EXPOSED>#${server_port_exposed}#" | \
         sed "s#<SERVER_LOCATION>#${server_location}#" | \
         sed "s#<SERVER_NAME>#${server_name}#" | \
-        sed "s#<SERVER_PROXY_PASS>#${server_proxy_pass}#" > ${target}
-
-    if [ "${server_protocol}" == "https" ]; then
-        # see: https://stackoverflow.com/questions/25204179/removing-subdomain-with-bash
-        if [ -z "${SERVER_DOMAIN}" ]; then SERVER_DOMAIN=$(expr match "${server_name}" '.*\.\(.*\..*\)'); fi
-        if [ -z "${SERVER_DOMAIN}" ]; then SERVER_DOMAIN="${server_name}"; fi
-        sed -i "s|<SERVER_DOMAIN>|${SERVER_DOMAIN}|" ${target}
-    fi
+        sed "s#<SERVER_PROXY_PASS>#${server_proxy_pass}#" | \
+        sed -i "s|<SERVER_DOMAIN>|${SERVER_DOMAIN}|" > ${target}
 
     # replace
     #    <BASIC_AUTH_SETTING>
@@ -117,7 +121,7 @@ function reverse_proxy() {
         sed -i "s|<BASIC_AUTH_SETTING>|# no basic auth header|" ${target}
     fi
 
-    echo "${target} content:"
+    (>&2 echo "${target} content:")
     cat ${target}
 }
 
@@ -144,11 +148,11 @@ for row in $(echo "${NGINX_PROXY_CONFIG}" | jq -r '.[] | @base64'); do
 
     if [ "${BACKEND_HOST}" != "null" ] && [ ! -z "${BACKEND_HOST}" ]; then
         # reverse_proxy mode
-        echo "BACKEND_HOST not null, reverse_proxy mode."
+        (>&2 echo "BACKEND_HOST not null, reverse_proxy mode.")
         SERVER_MODE="reverse_proxy"
     else
         # proxy mode
-        echo "BACKEND_HOST is null, proxy mode."
+        (>&2 echo "BACKEND_HOST is null, proxy mode.")
         SERVER_MODE="proxy"
     fi
 
@@ -194,26 +198,26 @@ for row in $(echo "${NGINX_PROXY_CONFIG}" | jq -r '.[] | @base64'); do
         SERVER_PROXY_PASS="${BACKEND_PROTOCOL}://backend_${SERVER_PROTOCOL}_${SERVER_NAME}"
         if [ "${SERVER_PROXY_PASS_CONTEXT}" != "null" ] && [ ! -z "${SERVER_PROXY_PASS_CONTEXT}" ]; then SERVER_PROXY_PASS="${SERVER_PROXY_PASS}${SERVER_PROXY_PASS_CONTEXT}"; fi
 
-        echo "BACKEND_HOST: ${BACKEND_HOST}, BACKEND_PORT: ${BACKEND_PORT}, BACKEND_PROTOCOL: ${BACKEND_PROTOCOL}"
-        echo "BASIC_AUTH_HEADER: ${BASIC_AUTH_HEADER}"
-        echo "SERVER_LOCATION: ${SERVER_LOCATION}"
-        echo "SERVER_NAME: ${SERVER_NAME}"
-        echo "SERVER_PORT: ${SERVER_PORT}"
-        echo "SERVER_PORT_EXPOSED: ${SERVER_PORT_EXPOSED}"
-        echo "SERVER_PROTOCOL: ${SERVER_PROTOCOL}"
-        echo "SERVER_PROXY_PASS: ${SERVER_PROXY_PASS}"
-        echo "TARGET_DIRECTORY: ${TARGET_DIRECTORY}"
+        (>&2 echo "BACKEND_HOST: ${BACKEND_HOST}, BACKEND_PORT: ${BACKEND_PORT}, BACKEND_PROTOCOL: ${BACKEND_PROTOCOL}")
+        (>&2 echo "BASIC_AUTH_HEADER: ${BASIC_AUTH_HEADER}")
+        (>&2 echo "SERVER_LOCATION: ${SERVER_LOCATION}")
+        (>&2 echo "SERVER_NAME: ${SERVER_NAME}")
+        (>&2 echo "SERVER_PORT: ${SERVER_PORT}")
+        (>&2 echo "SERVER_PORT_EXPOSED: ${SERVER_PORT_EXPOSED}")
+        (>&2 echo "SERVER_PROTOCOL: ${SERVER_PROTOCOL}")
+        (>&2 echo "SERVER_PROXY_PASS: ${SERVER_PROXY_PASS}")
+        (>&2 echo "TARGET_DIRECTORY: ${TARGET_DIRECTORY}")
 
         reverse_proxy "${BACKEND_HOST}:${BACKEND_PORT}" "${BASIC_AUTH_HEADER}" "${SERVER_LOCATION}" "${SERVER_NAME}" "${SERVER_PORT}" "${SERVER_PORT_EXPOSED}" "${SERVER_PROTOCOL}" "${SERVER_PROXY_PASS}" "${TARGET_DIRECTORY}"
     else
         if [ "${SERVER_NAME}" == "null" ] || [ -z "${SERVER_NAME}" ]; then SERVER_NAME="*"; fi
         SERVER_RESOLVER=$(cat /etc/resolv.conf | grep -i nameserver | head -n1 | cut -d ' ' -f2)
 
-        echo "SERVER_NAME: ${SERVER_NAME}"
-        echo "SERVER_PORT: ${SERVER_PORT}"
-        echo "SERVER_PORT_EXPOSED: ${SERVER_PORT_EXPOSED}"
-        echo "SERVER_RESOLVER: ${SERVER_RESOLVER}"
-        echo "TARGET_DIRECTORY: ${TARGET_DIRECTORY}"
+        (>&2 echo "SERVER_NAME: ${SERVER_NAME}")
+        (>&2 echo "SERVER_PORT: ${SERVER_PORT}")
+        (>&2 echo "SERVER_PORT_EXPOSED: ${SERVER_PORT_EXPOSED}")
+        (>&2 echo "SERVER_RESOLVER: ${SERVER_RESOLVER}")
+        (>&2 echo "TARGET_DIRECTORY: ${TARGET_DIRECTORY}")
 
         proxy "${SERVER_NAME}" "${SERVER_PORT}" "${SERVER_PORT_EXPOSED}" "${SERVER_RESOLVER}" "${TARGET_DIRECTORY}"
     fi
