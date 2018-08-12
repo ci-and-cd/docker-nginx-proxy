@@ -21,6 +21,7 @@ RUN set -ex \
   && chmod 777 /var/run \
   && chown -R nginx:nginx /var/cache/nginx /var/log/nginx \
   && if [ -f /etc/nginx/conf.d/default.conf ]; then rm -f /etc/nginx/conf.d/default.conf; fi \
+  && chown -R nginx:nginx /etc/nginx/conf.d \
   && ln -s /etc/letsencrypt /etc/nginx/certs \
   && rm -rf /tmp/* /var/cache/apk/*
 

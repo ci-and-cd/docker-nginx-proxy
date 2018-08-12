@@ -1,5 +1,5 @@
 
 d cache   1000:1000 777
-d certs   0:0       755
-d conf.d  0:0       755
+d certs   1000:1000 755
+d conf.d  1000:1000 755
 d log     1000:1000 777
