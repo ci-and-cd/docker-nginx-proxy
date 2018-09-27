@@ -1,12 +1,16 @@
 
+ARG IMAGE_ARG_IMAGE_TAG
+
+FROM nginx:${IMAGE_ARG_IMAGE_TAG:-1.15.0-alpine} as base
+
 # see: https://github.com/nginxinc/docker-nginx/blob/1.15.0/mainline/alpine/Dockerfile
 
-FROM nginx:1.15.0-alpine
-
+FROM scratch
 
 ARG IMAGE_ARG_ALPINE_MIRROR
 
 
+COPY --from=base / /
 COPY --chown=root:root docker /
 
 
