@@ -4,7 +4,7 @@ addons:
     packages:
     - aria2
 before_install:
-- curl -o /usr/local/bin/docker-compose https://github.com/docker/compose/releases/download/1.18.0/docker-compose-`uname -s`-`uname -m`
+- curl -sSLo /usr/local/bin/docker-compose https://github.com/docker/compose/releases/download/1.22.0/docker-compose-`uname -s`-`uname -m`
 branches:
   only:
   - develop
