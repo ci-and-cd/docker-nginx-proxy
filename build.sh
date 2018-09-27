@@ -3,6 +3,7 @@
 set -e
 
 docker version
+which docker-compose
 docker-compose version
 
 WORK_DIR=$(pwd)
