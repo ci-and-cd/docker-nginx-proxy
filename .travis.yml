@@ -9,7 +9,7 @@ before_install:
 #Error -3 from inflate: incorrect header check
 #Error decompressing _bisect.so
 #Failed to write all bytes for _bisect.so
-- sudo aria2c --file-allocation=none -c -x 10 -s 10 -m 0 --console-log-level=notice --log-level=notice --summary-interval=0 -d /usr/local/bin -o docker-compose https://github.com/docker/compose/releases/download/1.19.0/docker-compose-`uname -s`-`uname -m`
+- sudo aria2c --file-allocation=none -c -x 10 -s 10 -m 0 --console-log-level=notice --log-level=notice --summary-interval=0 -d /usr/local/bin -o docker-compose https://github.com/docker/compose/releases/download/1.21.2/docker-compose-`uname -s`-`uname -m`
 - sudo chmod 755 /usr/local/bin/docker-compose
 - df -h
 branches:
