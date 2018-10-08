@@ -10,7 +10,7 @@ services:
     networks:
       local-network:
         ipv4_address: 172.16.238.32
-        ipv6_address: 2001:3984:3989::32
+        #ipv6_address: 2001:3984:3989::32
     ports:
     - "${NEXUS3_DOCKER_HOSTED_PORT:-5000}:${NEXUS3_DOCKER_HOSTED_PORT:-5000}/tcp"
     - "${NEXUS3_DOCKER_PUBLIC_PORT:-5001}:${NEXUS3_DOCKER_PUBLIC_PORT:-5001}/tcp"
@@ -82,7 +82,7 @@ networks:
       driver: default
       config:
       - subnet: 172.16.238.0/24
-      - subnet: 2001:3984:3989::/64
+      #- subnet: 2001:3984:3989::/64
 
 volumes:
   cache:
