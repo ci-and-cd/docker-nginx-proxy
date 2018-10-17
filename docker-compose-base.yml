@@ -15,5 +15,5 @@ services:
     environment:
     - OVERWRITE_EXISTING_CONF=${OVERWRITE_EXISTING_CONF:-true}
     - SKIP_CONF_GENERATION=${SKIP_CONF_GENERATION:-false}
-    image: ${IMAGE_PREFIX:-cirepo}/${IMAGE_NAME:-nginx-proxy}:${IMAGE_TAG:-1.15.0-alpine}
+    image: ${IMAGE_PREFIX:-cirepo/}${IMAGE_NAME:-nginx-proxy}:${IMAGE_TAG:-1.15.0-alpine}
     restart: always
