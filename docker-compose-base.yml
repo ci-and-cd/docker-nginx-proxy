@@ -16,4 +16,12 @@ services:
     - OVERWRITE_EXISTING_CONF=${OVERWRITE_EXISTING_CONF:-true}
     - SKIP_CONF_GENERATION=${SKIP_CONF_GENERATION:-false}
     image: ${IMAGE_PREFIX:-cirepo/}${IMAGE_NAME:-nginx-proxy}:${IMAGE_TAG:-1.15.0-alpine}
+    labels:
+      deploy.config.commit: ${LABEL_DEPLOY_CONFIG_COMMIT:-unknown}
+      deploy.config.name: ${LABEL_DEPLOY_CONFIG_NAME:-unknown}
+      deploy.config.ref: ${LABEL_DEPLOY_CONFIG_REF:-unknown}
+      deploy.util.commit: ${LABEL_DEPLOY_UTIL_COMMIT:-unknown}
+      deploy.util.ref: ${LABEL_DEPLOY_UTIL_REF:-unknown}
+      instance.name.short: ${LABEL_INSTANCE_NAME_SHORT:-standalone.nginx-proxy}
+      instance.name: ${LABEL_INSTANCE_NAME:-127.0.0.1/nginx-proxy/standalone}
     restart: always
