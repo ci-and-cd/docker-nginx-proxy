@@ -5,12 +5,20 @@ services:
     extends:
       file: docker-compose-base.yml
       service: base-nginx-proxy
-    container_name: ${CONTAINER_HOST_NAME:-nginx-proxy-http}
-    hostname: ${CONTAINER_HOST_NAME:-nginx-proxy-http}
+    container_name: ${CONTAINER_HOST_NAME:-standalone.nginx-proxy-http}
+    hostname: ${CONTAINER_HOST_NAME:-standalone.nginx-proxy-http}
+    labels:
+      deploy.config.commit: ${LABEL_DEPLOY_CONFIG_COMMIT:-unknown}
+      deploy.config.name: ${LABEL_DEPLOY_CONFIG_NAME:-unknown}
+      deploy.config.ref: ${LABEL_DEPLOY_CONFIG_REF:-unknown}
+      deploy.util.commit: ${LABEL_DEPLOY_UTIL_COMMIT:-unknown}
+      deploy.util.ref: ${LABEL_DEPLOY_UTIL_REF:-unknown}
+      instance.name.short: ${LABEL_INSTANCE_NAME_SHORT:-standalone.nginx-proxy-http}
+      instance.name: ${LABEL_INSTANCE_NAME:-127.0.0.1/nginx-proxy-http/standalone}
     networks:
       local-network:
-        ipv4_address: 172.16.238.32
-        #ipv6_address: 2001:3984:3989::32
+        ipv4_address: ${IPV4_ADDRESS:-172.16.238.32}
+        #ipv6_address: ${IPV6_ADDRESS:-2001:3984:3989::32}
     ports:
     - "${NEXUS3_DOCKER_HOSTED_PORT:-5000}:${NEXUS3_DOCKER_HOSTED_PORT:-5000}/tcp"
     - "${NEXUS3_DOCKER_PUBLIC_PORT:-5001}:${NEXUS3_DOCKER_PUBLIC_PORT:-5001}/tcp"
