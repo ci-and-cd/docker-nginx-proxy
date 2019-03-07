@@ -19,6 +19,14 @@ RUN set -ex \
   && echo "http://${IMAGE_ARG_ALPINE_MIRROR:-dl-cdn.alpinelinux.org}/alpine/v3.7/community" >> /etc/apk/repositories \
   && echo "http://${IMAGE_ARG_ALPINE_MIRROR:-dl-cdn.alpinelinux.org}/alpine/edge/testing/" >> /etc/apk/repositories \
   && apk add --no-cache --update certbot jq shadow socat sudo \
+  \
+  && apk add --no-cache --update gcc libffi-dev musl-dev openssl-dev python-dev py-pip \
+  && apk search -v \
+  && sudo pip install --upgrade pip \
+  && sudo pip uninstall -y pyOpenSSL cryptography idna \
+  && sudo pip install pyOpenSSL cryptography idna==2.6 \
+  && sudo apk del gcc libffi-dev musl-dev openssl-dev python-dev \
+  \
   && usermod -u 1000 nginx \
   && groupmod -g 1000 nginx \
   && echo "nginx ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/nginx \

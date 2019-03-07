@@ -75,8 +75,9 @@ services:
 
     volumes:
     - cache:/var/cache/nginx
-    - certs-archive:/etc/letsencrypt/archive
-    - certs-keys:/etc/letsencrypt/keys
+    - ${NGINX_CERTS:-certs}:/etc/letsencrypt
+      # Files under archive is not visible if mount data/certs only. This might be a bug of Docker for Mac 2.0.0.3
+    - ${NGINX_CERTS:-certs-archive}:/etc/letsencrypt/archive
     - conf.d:/etc/nginx/conf.d
     - log:/var/log/letsencrypt
     - log:/var/log/nginx
@@ -99,17 +100,18 @@ volumes:
       type: none
       device: ${PWD}/data/cache
       o: bind
+  certs:
+    driver: local
+    driver_opts:
+      type: none
+      device: ${PWD}/data/certs
+      o: bind
+  # Files under archive is not visible if mount data/certs only. This might be a bug of Docker for Mac 2.0.0.3
   certs-archive:
     driver: local
     driver_opts:
       type: none
       device: ${PWD}/data/certs/archive
-      o: bind
-  certs-keys:
-    driver: local
-    driver_opts:
-      type: none
-      device: ${PWD}/data/certs/keys
       o: bind
   conf.d:
     driver: local

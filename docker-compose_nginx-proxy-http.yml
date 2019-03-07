@@ -99,17 +99,18 @@ volumes:
       type: none
       device: ${PWD}/data/cache
       o: bind
+  certs:
+    driver: local
+    driver_opts:
+      type: none
+      device: ${PWD}/data/certs
+      o: bind
+  # Files under archive is not visible if mount data/certs only. This might be a bug of Docker for Mac 2.0.0.3
   certs-archive:
     driver: local
     driver_opts:
       type: none
       device: ${PWD}/data/certs/archive
-      o: bind
-  certs-keys:
-    driver: local
-    driver_opts:
-      type: none
-      device: ${PWD}/data/certs/keys
       o: bind
   conf.d:
     driver: local
