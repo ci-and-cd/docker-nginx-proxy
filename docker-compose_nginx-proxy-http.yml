@@ -37,46 +37,47 @@ services:
 
 
           {"host": "172.16.238.31", "port": ${NEXUS3_DOCKER_PUBLIC_PORT:-5000}, "pass": "${BASIC_AUTH_PASS:-deployment}", "user": "${BASIC_AUTH_USER:-}",
-            "server_location": "/", "server_name": "${SERVER_NAME_PREFIX:-}docker-mirror${DOT_INSTANCE_DOMAIN:-.infra.top}", "server_port": ${NEXUS3_DOCKER_PUBLIC_PORT:-5000}, "server_protocol": "http"},
+            "server_location": "/", "server_name": "${SERVER_NAME_PREFIX:-}docker-mirror${DOT_INSTANCE_DOMAIN:-}", "server_port": ${NEXUS3_DOCKER_PUBLIC_PORT:-5000}, "server_protocol": "http"},
 
 
 
 
           {"host": "172.16.238.31", "port": ${NEXUS3_DOCKER_HOSTED_PORT:-5010}, "pass": "${BASIC_AUTH_PASS:-deployment}", "user": "${BASIC_AUTH_USER:-}",
-            "server_location": "/", "server_name": "${SERVER_NAME_PREFIX:-}docker-registry${DOT_INSTANCE_DOMAIN:-.infra.top}", "server_port": ${NEXUS3_DOCKER_HOSTED_PORT:-5010}, "server_protocol": "http"},
+            "server_location": "/", "server_name": "${SERVER_NAME_PREFIX:-}docker-registry${DOT_INSTANCE_DOMAIN:-}", "server_port": ${NEXUS3_DOCKER_HOSTED_PORT:-5010}, "server_protocol": "http"},
 
 
 
 
 
           {"host": "172.16.238.31", "port": ${NEXUS3_PORT:-28081}, "pass": "${BASIC_AUTH_PASS:-deployment}", "user": "${BASIC_AUTH_USER:-}",
-            "server_location": "~ ^/(.*)", "server_name": "${SERVER_NAME_PREFIX:-}fileserver${DOT_INSTANCE_DOMAIN:-.infra.top}", "server_port": ${NONSECUREPORT:-1080}, "server_protocol": "http",
+            "server_location": "~ ^/(.*)", "server_name": "${SERVER_NAME_PREFIX:-}fileserver${DOT_INSTANCE_DOMAIN:-}", "server_port": ${NONSECUREPORT:-1080}, "server_protocol": "http",
             "server_proxy_pass_context": "/nexus/repository/files/$$1"},
 
           {"host": "172.16.238.21", "port": ${GIT_HTTP_PORT:-10080},
-            "server_location": "/", "server_name": "git${DOT_INSTANCE_DOMAIN:-.infra.top}", "server_port": ${NONSECUREPORT:-1080}, "server_protocol": "http"},
+            "server_location": "/", "server_name": "git${DOT_INSTANCE_DOMAIN:-}", "server_port": ${NONSECUREPORT:-1080}, "server_protocol": "http"},
 
           {"host": "172.16.238.31", "port": ${NEXUS3_PORT:-28081}, "pass": "${BASIC_AUTH_PASS:-deployment}", "user": "${BASIC_AUTH_USER:-}",
-            "server_location": "~ ^/(.*)", "server_name": "${SERVER_NAME_PREFIX:-}maven-site${DOT_INSTANCE_DOMAIN:-.infra.top}", "server_port": ${NONSECUREPORT:-1080}, "server_protocol": "http",
+            "server_location": "~ ^/(.*)", "server_name": "${SERVER_NAME_PREFIX:-}maven-site${DOT_INSTANCE_DOMAIN:-}", "server_port": ${NONSECUREPORT:-1080}, "server_protocol": "http",
             "server_proxy_pass_context": "/nexus/repository/mvnsite/$$1"},
 
           {"host": "172.16.238.31", "port": ${NEXUS3_PORT:-28081}, "pass": "${BASIC_AUTH_PASS:-deployment}", "user": "${BASIC_AUTH_USER:-}",
-            "server_location": "/", "server_name": "${SERVER_NAME_PREFIX:-}nexus3${DOT_INSTANCE_DOMAIN:-.infra.top}", "server_port": ${NONSECUREPORT:-1080}, "server_protocol": "http"},
+            "server_location": "/", "server_name": "${SERVER_NAME_PREFIX:-}nexus3${DOT_INSTANCE_DOMAIN:-}", "server_port": ${NONSECUREPORT:-1080}, "server_protocol": "http"},
 
           {"host": "172.16.238.31", "port": ${NEXUS3_PORT:-28081},
-              "server_location": "/", "server_name": "${SERVER_NAME_PREFIX:-}node${DOT_INSTANCE_DOMAIN:-.infra.top}", "server_port": ${NONSECUREPORT:-1080}, "server_protocol": "http"},
+              "server_location": "/", "server_name": "${SERVER_NAME_PREFIX:-}node${DOT_INSTANCE_DOMAIN:-}", "server_port": ${NONSECUREPORT:-1080}, "server_protocol": "http"},
 
           {"host": "172.16.238.31", "port": ${NEXUS3_PORT:-28081},
-              "server_location": "/", "server_name": "${SERVER_NAME_PREFIX:-}npm${DOT_INSTANCE_DOMAIN:-.infra.top}", "server_port": ${NONSECUREPORT:-1080}, "server_protocol": "http"},
+              "server_location": "/", "server_name": "${SERVER_NAME_PREFIX:-}npm${DOT_INSTANCE_DOMAIN:-}", "server_port": ${NONSECUREPORT:-1080}, "server_protocol": "http"},
 
           {"host": "172.16.238.67", "port": ${SONARQUBE_EXTERNAL_PORT:-9000},
-              "server_location": "/", "server_name": "sonar${DOT_INSTANCE_DOMAIN:-.infra.top}", "server_port": ${NONSECUREPORT:-1080}, "server_protocol": "http"}
+              "server_location": "/", "server_name": "sonar${DOT_INSTANCE_DOMAIN:-}", "server_port": ${NONSECUREPORT:-1080}, "server_protocol": "http"}
         ]
 
     volumes:
     - cache:/var/cache/nginx
-
-
+#    - ${NGINX_CERTS:-certs}:/etc/letsencrypt
+#      # Files under archive is not visible if mount data/certs only. This might be a bug of Docker for Mac 2.0.0.3
+#    - ${NGINX_CERTS:-certs-archive}:/etc/letsencrypt/archive
     - conf.d:/etc/nginx/conf.d
     - log:/var/log/letsencrypt
     - log:/var/log/nginx

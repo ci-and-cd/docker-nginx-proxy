@@ -3,26 +3,28 @@
 set -e
 
 echo "USER $(whoami)"
-echo "find /etc/letsencrypt"
-find /etc/letsencrypt
+if [ -d /etc/letsencrypt ]; then
+    echo "find /etc/letsencrypt"
+    find /etc/letsencrypt
+fi
 
 if ([ "$1" == 'sudo' ] && [ "$2" == nginx ]) || [ "$1" == 'nginx' ]; then
 
-    # /etc/letsencrypt/archive/<domain>/*
-    # /etc/letsencrypt/live/<domain>/cert.pem -> ../../archive/<domain>/cert1.pem
-    # /etc/letsencrypt/live/<domain>/chain.pem -> ../../archive/<domain>/chain1.pem
-    # /etc/letsencrypt/live/<domain>/fullchain.pem -> ../../archive/<domain>/fullchain1.pem
-    # /etc/letsencrypt/live/<domain>/privkey.pem -> ../../archive/<domain>/privkey1.pem
-    if [ "$(whoami)" != "root" ]; then
-        sudo chown -R root:1000 /etc/letsencrypt
-        sudo chmod -R g+r /etc/letsencrypt
-        sudo chmod -R g+x /etc/letsencrypt
-        sudo find /etc/letsencrypt -type f -name "priv*.pem" | xargs sudo chmod 640
-    else
-        chown -R root:1000 /etc/letsencrypt
-        chmod -R g+r /etc/letsencrypt
-        chmod -R g+x /etc/letsencrypt
-        find /etc/letsencrypt -type f -name "priv*.pem" | xargs chmod 640
+    if [ -d /etc/letsencrypt ]; then
+        # /etc/letsencrypt/archive/<domain>/*
+        # /etc/letsencrypt/live/<domain>/cert.pem -> ../../archive/<domain>/cert1.pem
+        # /etc/letsencrypt/live/<domain>/chain.pem -> ../../archive/<domain>/chain1.pem
+        # /etc/letsencrypt/live/<domain>/fullchain.pem -> ../../archive/<domain>/fullchain1.pem
+        # /etc/letsencrypt/live/<domain>/privkey.pem -> ../../archive/<domain>/privkey1.pem
+        if [ "$(whoami)" != "root" ]; then
+            sudo chown -R root:1000 /etc/letsencrypt
+            sudo chmod -R g+rx /etc/letsencrypt
+            sudo find /etc/letsencrypt -type f -name 'priv*.pem' -exec sudo chmod g=rw,u=r,o= {} \;
+        else
+            chown -R root:1000 /etc/letsencrypt
+            chmod -R g+rx /etc/letsencrypt
+            find /etc/letsencrypt -type f -name 'priv*.pem' -exec sudo chmod g=rw,u=r,o= {} \;
+        fi
     fi
 
     /render.sh "/etc/nginx/conf.d"
