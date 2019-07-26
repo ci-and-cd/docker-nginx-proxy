@@ -67,9 +67,10 @@ services:
               "server_location": "/", "server_name": "${SERVER_NAME_PREFIX:-}node${DOT_INSTANCE_DOMAIN:-.infra.top}", "server_port": ${SECUREPORT:-1443}, "server_protocol": "https"},
 
           {"host": "172.16.238.31", "port": ${NEXUS3_PORT:-28081}, "protocol": "http", "anonymous": "read", "pass": "${BASIC_AUTH_PASS:-deployment}", "user": "${BASIC_AUTH_USER:-deployment}",
-              "server_location": "/", "server_name": "${SERVER_NAME_PREFIX:-}npm${DOT_INSTANCE_DOMAIN:-.infra.top}", "server_port": ${SECUREPORT:-1443}, "server_protocol": "https"}
+              "server_location": "/", "server_name": "${SERVER_NAME_PREFIX:-}npm${DOT_INSTANCE_DOMAIN:-.infra.top}", "server_port": ${SECUREPORT:-1443}, "server_protocol": "https"},
 
-
+          {"host": "172.16.238.191", "port": ${EXTERNAL_MINIO_9000_PORT:-9000}, "protocol": "http", "anonymous": "false",
+            "server_location": "/", "server_name": "${SERVER_NAME_PREFIX:-}minio${DOT_INSTANCE_DOMAIN:-.infra.top}", "server_port": ${SECUREPORT:-1443}, "server_protocol": "https"}
 
         ]
 
