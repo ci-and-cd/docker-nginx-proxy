@@ -22,10 +22,10 @@ RUN set -ex \
   \
   && apk add --no-cache --update gcc libffi-dev musl-dev openssl-dev python-dev py-pip \
   && apk search -v \
-  && sudo pip install --upgrade pip \
-  && sudo pip uninstall -y pyOpenSSL cryptography idna \
-  && sudo pip install pyOpenSSL cryptography idna==2.6 \
-  && sudo apk del gcc libffi-dev musl-dev openssl-dev python-dev \
+  && pip install --upgrade pip \
+  && pip uninstall -y pyOpenSSL cryptography idna \
+  && pip install pyOpenSSL cryptography idna==2.6 \
+  && apk del gcc libffi-dev musl-dev openssl-dev python-dev \
   \
   && usermod -u 1000 nginx \
   && groupmod -g 1000 nginx \
@@ -37,6 +37,19 @@ RUN set -ex \
   && ln -s /etc/letsencrypt /etc/nginx/certs \
   && rm -rf /tmp/* /var/cache/apk/*
 
+# see: https://github.com/arut/nginx-dav-ext-module
+RUN set -ex \
+  && apk add --no-cache --update git gcc libxslt-dev make musl-dev pcre-dev zlib-dev \
+  && wget https://nginx.org/download/nginx-1.15.0.tar.gz \
+  && tar -xzvf nginx-1.15.0.tar.gz \
+  && git clone -b 'v3.0.0' --single-branch --depth 1 https://github.com/arut/nginx-dav-ext-module.git \
+  && cd nginx-1.15.0 \
+  && ./configure --with-compat --with-http_dav_module --add-dynamic-module=../nginx-dav-ext-module \
+  && make modules \
+  && cp objs/ngx_http_dav_ext_module_modules.o /etc/nginx/modules/ \
+  && chmod 755 /etc/nginx/modules/ngx_http_dav_ext_module_modules.o \
+  && apk del git gcc libxslt-dev make musl-dev pcre-dev zlib-dev \
+  && rm -rf /tmp/* /var/cache/apk/*
 
 USER nginx
 

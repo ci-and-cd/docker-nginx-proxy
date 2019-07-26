@@ -42,6 +42,15 @@ server {
         proxy_set_header      X-Forwarded-Proto "https";
         proxy_set_header      X-Real-IP $remote_addr;
 
+        # Fix move request '502 bad gateway' for upstream WebDAV servers
+        # see: https://codeday.me/bug/20181122/398608.html
+        # see: https://github.com/viossat/docker-keeweb-webdav/issues/4
+        # to avoid 502 Bad Gateway:
+        # http://vanderwijk.info/Members/ivo/articles/ComplexSVNSetupFix
+        set $destination $http_destination;
+        if ($destination ~* ^https(.+)$) { set $destination http$1; }
+        proxy_set_header      Destination $destination;
+
         proxy_pass            <SERVER_PROXY_PASS>;
 
         #sub_filter "http://<SERVER_NAME>:<SERVER_PORT_EXPOSED>/" "https://<SERVER_NAME>:<SERVER_PORT_EXPOSED>/";
